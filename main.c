@@ -11,7 +11,7 @@
 
 //drawing
 static int lines,cols,current_line_selected;
-
+static int fg,bg;
 
 static void pad_line(int to_right){
     int l,c;
@@ -28,7 +28,23 @@ static void draw_line(int line){
     }else{
         config_set_face_attr(Line,1);
     }
-    mvwprintw (stdscr,line,0, "[1/5] Somedue,Otherdude Blablabla (inbox unread) ");
+    mvwprintw (stdscr,line,0, "[1/5] Somedue,Otherdude Blablabla  ");
+
+
+
+    if(line==current_line_selected){
+        config_set_face_attr(TagSelected,1);
+    }else{
+        config_set_face_attr(Tag,1);
+    }
+    wprintw (stdscr, "(inbox unread)");
+    if(line==current_line_selected){
+        config_set_face_attr(TagSelected,1);
+    }else{
+        config_set_face_attr(Tag,1);
+    }
+
+
     pad_line(0);
     if(line==current_line_selected){
         config_set_face_attr(LineSelected,0);
@@ -40,8 +56,8 @@ static void draw_line(int line){
 void draw_status_win(){
     config_set_face_attr(StatusWin,1);
     mvwprintw (stdscr,lines-1,0, "notmuch search tag:inbox");
-    pad_line(8);
-    wprintw (stdscr, "page 1/1");
+    pad_line(7);
+    wprintw (stdscr, "(1/32)  ");
     config_set_face_attr(StatusWin,0);
 }
 
@@ -80,6 +96,8 @@ int main(int argc,char**argv){
     initscr();
     curs_set(0);
     start_color();
+    use_default_colors();
+    assume_default_colors(-2,-1);
     config_init();
 
     clear();
