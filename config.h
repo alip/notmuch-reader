@@ -1,5 +1,3 @@
-#include <ncurses.h>
-
 int config_init();
 
 const char * config_notmuch_call();
@@ -21,4 +19,4 @@ enum Face{
 
 void config_face_attr(enum Face f,int set);
 
-void config_set_face_attr(WINDOW *w, enum Face f, int set);
+
