@@ -1,9 +1,6 @@
-all: notmuchreader notmuchjson
+all: notmuchreader
 
-CFLAGS= $(shell pkg-config --cflags jansson)
-LDFLAGS= $(shell pkg-config --libs jansson)
-
-notmuchreader: main.o config.o
-	$(CC) main.o config.o -o notmuchreader -lcurses
-notmuchjson: json.o
-	$(CC) json.o $(LDFLAGS) -o notmuchjson
+notmuchreader: main.o config.o notmuch.o JSON_parser.o
+	$(CC) $^ -o $@  -lcurses
+clean: 
+	rm *.o
