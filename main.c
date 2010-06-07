@@ -67,10 +67,10 @@ static void draw_line(int line){
             config_set_face_attr(Line,1);
         }
 
-        char exp_buff[20];
-        snprintf(&exp_buff,20,"%i",expected_threads);
-        int exp=strlen(&exp_buff);
-        mvwprintw (stdscr,line,0, "%'*i/%'-*i",exp,th->matched,exp,th->total);
+        //format the matched/total column
+        int expected_num_w=3;
+        mvwprintw (stdscr,line,0, "%'*i/%'-*i",expected_num_w,
+                th->matched,expected_num_w,th->total);
 
         clip_addstr("     ");
 
@@ -97,15 +97,15 @@ static void draw_line(int line){
         }
         for(int i=0;i<th->tags_l;i++){
             if(strcmp(th->tags[i],"attachment")==0){
-                addstr_at("A",(exp*2)+3);
+                addstr_at("A",(expected_num_w*2)+3);
                 continue;
             }
             if(strcmp(th->tags[i],"inbox")==0){
-                addstr_at("I",(exp*2)+2);
+                addstr_at("I",(expected_num_w*2)+2);
                 continue;
             }
             if(strcmp(th->tags[i],"unread")==0){
-                addstr_at("U",(exp*2)+3);
+                addstr_at("U",(expected_num_w*2)+3);
                 continue;
             }
             clip_addstr("+");
