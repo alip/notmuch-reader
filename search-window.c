@@ -24,25 +24,24 @@ void nmr_search_draw_line(int line){
 
         struct nmr_notmuch_thread * th=threads[line];
 
-        if(line==current_line){
-            config_set_face_attr(LineSelected,1);
-        }else{
-            config_set_face_attr(Line,1);
-        }
+        config_set_face_attr(line==current_line?LineSelected:Line,1);
 
         //format the matched/total column
         int expected_num_w=3;
         mvwprintw (stdscr,line,0, "%'*i/%'-*i",expected_num_w,
                 th->matched,expected_num_w,th->total);
 
+        //make room for short tags
         clip_addstr("     ");
 
+        //print Authors
         config_set_face_attr(Authors,1);
         clip_addstr (th->authors);
         pad_left((cols+0.5)/4);
         wmove(stdscr,line,(cols+0.5)/4);
         config_set_face_attr(Authors,0);
 
+        //format subject
         for(int i=0;i<th->tags_l;i++){
             if(strcmp(th->tags[i],"unread")==0){
                 attron(WA_BOLD);
@@ -51,24 +50,21 @@ void nmr_search_draw_line(int line){
         clip_addstr("  ");
         clip_addstr (th->subject);
         clip_addstr("  ");
-//        pad_right(cols/4);
         attroff(WA_BOLD);
-        if(line==current_line){
-            config_set_face_attr(TagSelected,1);
-        }else{
-            config_set_face_attr(Tag,1);
-        }
+
+        //print long tags
+        config_set_face_attr(line==current_line?TagSelected:Tag,1);
         for(int i=0;i<th->tags_l;i++){
             if(strcmp(th->tags[i],"attachment")==0){
-                addstr_at("A",(expected_num_w*2)+3);
+                addstr_at("A",(expected_num_w*2)+4);
                 continue;
             }
             if(strcmp(th->tags[i],"inbox")==0){
-                addstr_at("I",(expected_num_w*2)+2);
+                addstr_at("I",(expected_num_w*2)+3);
                 continue;
             }
             if(strcmp(th->tags[i],"unread")==0){
-                addstr_at("U",(expected_num_w*2)+3);
+                addstr_at("U",(expected_num_w*2)+2);
                 continue;
             }
             clip_addstr("+");
@@ -77,15 +73,8 @@ void nmr_search_draw_line(int line){
                 clip_addstr(" ");
             }
         }
-        if(line==current_line){
-            config_set_face_attr(TagSelected,0);
-        }else{
-            config_set_face_attr(Tag,0);
-        }
-//        pad_right((4*cols/5)-9);
+        config_set_face_attr(line==current_line?TagSelected:Tag,0);
         clip_addstr(" ");
-
-        //        wprintw (stdscr," \t\t--  %s ",th->authors);
     }else{
         mvwprintw (stdscr,line,0, "...");
     }

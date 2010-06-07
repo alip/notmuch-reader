@@ -1,6 +1,15 @@
 all: notmuchreader
+OBJECTS=main.o config.o notmuch.o search-window.o \
+		3rdparty/JSON_parser.o \
+		3rdparty/iniparser3.0b/src/dictionary.o \
+		3rdparty/iniparser3.0b/src/iniparser.o
 
-notmuchreader: main.o config.o notmuch.o JSON_parser.o search-window.o
+
+
+CFLAGS+=-Wall
+CFLAGS+=-I3rdparty
+
+notmuchreader: $(OBJECTS)
 	$(CC) $^ -o $@  -lcursesw
 
 %.o:%.c
