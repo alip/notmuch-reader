@@ -22,6 +22,9 @@ struct nmr_notmuch{
     struct nmr_notmuch_thread * next_thread;
 };
 
+extern struct nmr_notmuch_thread **threads;
+extern int thread_count;
+
 int nmr_notmuch_search(struct nmr_notmuch *, const char * query);
 int nmr_notmuch_activate(struct nmr_notmuch *);
 

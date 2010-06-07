@@ -1,10 +1,12 @@
 all: notmuchreader
 
-notmuchreader: main.o config.o notmuch.o JSON_parser.o
+CFLAGS= -Wall -Wextra
+
+notmuchreader: main.o config.o notmuch.o JSON_parser.o search_window.o status_bar.o
 	$(CC) $^ -o $@  -lcurses
 
-%.o:%.c
-	$(CC) -c -std=c99 $^ -o $@ 
+%.o: %.c
+	$(CC) $(CFLAGS) -c -std=c99 $^ -o $@
 
-clean: 
-	rm *.o
+clean:
+	rm -f *.o || true

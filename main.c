@@ -7,138 +7,63 @@
 #include <signal.h>
 #include <string.h>
 #include <fcntl.h>
-#include "config.h"
 #include <locale.h>
+
+#include "config.h"
 #include "notmuch.h"
+#include "search_window.h"
+#include "status_bar.h"
 
+struct nmr_notmuch_thread **threads = NULL;
+int thread_count = 0;
 
-//drawing
-static int lines,cols,current_line_selected;
-static int fg,bg;
+static search_window_t search_window;
+static status_bar_t status_bar;
 
-static struct nmr_notmuch_thread ** threads=0;
-static int thread_count=0; 
-
-static void pad_right(int to_right){
-    int l,c;
-    getyx(stdscr, l,c);
-    while(c<(cols-to_right)){
-        mvaddch(l,c++,' ');
-    }
-}
-static void pad_left(int to_left){
-    int l,c;
-    getyx(stdscr, l,c);
-    while(c<to_left){
-        mvaddch(l,c++,' ');
-    }
-}
-
-
-
-static void draw_line(int line){
-    if(line>lines-2)
-        return;
-
-    if(line==current_line_selected){
-        config_set_face_attr(LineSelected,1);
-    }else{
-        config_set_face_attr(Line,1);
-    }
-
-    if(line<thread_count){
-        struct nmr_notmuch_thread * th=threads[line];
-        mvwprintw (stdscr,line,0, "[%i/%i]",th->matched,th->total);
-    }else{
-        mvwprintw (stdscr,line,0, "...");
-    }
-
-    pad_left(8);
-    if(line<thread_count){
-        struct nmr_notmuch_thread * th=threads[line];
-        wprintw (stdscr, "%s %s  ",th->authors,th->subject);
-
-
-        wprintw (stdscr, "(");
-        if(line==current_line_selected){
-            config_set_face_attr(TagSelected,1);
-        }else{
-            config_set_face_attr(Tag,1);
-        }
-        for(int i=0;i<th->tags_l;){
-            wprintw(stdscr,"%s",th->tags[i]);
-            if(++i<th->tags_l){
-                wprintw(stdscr," ",th->tags[i]);
-            }
-        }
-        if(line==current_line_selected){
-            config_set_face_attr(TagSelected,0);
-        }else{
-            config_set_face_attr(Tag,0);
-        }
-        wprintw (stdscr, ")");
-    }
-    pad_right(0);
-    if(line==current_line_selected){
-        config_set_face_attr(LineSelected,0);
-    }else{
-        config_set_face_attr(Line,0);
-    }
-}
-
-void draw_status_win(){
-    config_set_face_attr(StatusWin,1);
-    mvwprintw (stdscr,lines-1,0, "tag:inbox");
-    //    pad_line(7);
-    wprintw (stdscr, "    (%i/%i)  ",current_line_selected+1,thread_count);
-    pad_right(0);
-    config_set_face_attr(StatusWin,0);
-}
-
-//main
-
-
-int action_quit(void * c_){
+/* Actions */
+int action_quit(void * c_) {
     return 1;
 }
+
 int action_next_line(void * c_){
-    if(current_line_selected>0){
-        --current_line_selected;
-        draw_line(current_line_selected);
-        draw_line(current_line_selected+1);
-        draw_status_win();
-    }
-    return 0;
-}
-int action_previous_line(void * c_){
-    if(current_line_selected<(thread_count-1)){
-        ++current_line_selected;
-        draw_line(current_line_selected);
-        draw_line(current_line_selected-1);
-        draw_status_win();
+    if (search_window.current < thread_count - 1) {
+        ++search_window.current;
+        search_window_draw_line(&search_window, search_window.current);
+        search_window_draw_line(&search_window, search_window.current - 1);
+        status_bar_message(&status_bar, "tag:inbox %i/%i", search_window.current, thread_count);
     }
     return 0;
 }
 
-static void cleanup(){
-    curs_set(1);
-    clrtoeol();
-    refresh();
+int action_previous_line(void * c_) {
+    if (search_window.current > 0) {
+        --search_window.current;
+        search_window_draw_line(&search_window, search_window.current);
+        search_window_draw_line(&search_window, search_window.current + 1);
+        status_bar_message(&status_bar, "tag:inbox %i/%i", search_window.current, thread_count);
+    }
+    return 0;
+}
+
+static void cleanup() {
+    search_window_deinit(&search_window);
+    status_bar_deinit(&status_bar);
     endwin();
 }
 
 static struct nmr_notmuch nm;
 
-void nmr_callback(struct nmr_notmuch_thread* t){
+void nmr_callback(struct nmr_notmuch_thread *t) {
     thread_count++;
-    if(threads==NULL){
-        threads=malloc(sizeof(void*));
-    }else{
-        threads=realloc(threads,sizeof(void*)*thread_count);
-    }
-    threads[thread_count-1]=t;
-    draw_line(thread_count-1);
-    draw_status_win();
+
+    if (!threads)
+        threads = malloc (sizeof(struct nmr_thread *));
+    else
+        threads = realloc(threads, sizeof(struct nmr_thread *) * thread_count);
+
+    threads[thread_count - 1] = t;
+    search_window_draw_line(&search_window, thread_count - 1);
+    status_bar_message(&status_bar, "tag:inbox %i/%i", search_window.current, thread_count);
     refresh();
 }
 
@@ -154,21 +79,22 @@ int main(int argc,char**argv){
     cbreak();
     keypad(stdscr, TRUE);
     noecho();
+    typeahead(-1);
 
-    cols=getmaxx(stdscr);
-    lines=getmaxy(stdscr);
+    search_window_init(&search_window);
+    status_bar_init(&status_bar, COLS, LINES - 1, 0);
 
-    draw_status_win();
-    draw_line(0);
+    search_window_draw_line(&search_window, 0);
+    status_bar_message(&status_bar, "tag:inbox %i/%i", search_window.current, thread_count);
     refresh();
 
     struct actions a;
-    a.quit=action_quit;
-    a.previous_line=action_previous_line;
-    a.next_line=action_next_line;
+    a.quit = action_quit;
+    a.previous_line = action_previous_line;
+    a.next_line = action_next_line;
 
-    nm.callback=&nmr_callback;
-    nmr_notmuch_search(&nm,"tag:inbox");
+    nm.callback = &nmr_callback;
+    nmr_notmuch_search(&nm, "tag:inbox");
 
     fd_set rfds;
     fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
@@ -188,13 +114,12 @@ int main(int argc,char**argv){
         }
         if(FD_ISSET(0, &rfds)){
             int c=getch();
-            if(config_handle_key_action(c,&a,0)){
+            if(config_handle_key_action(c, &a, 0)) {
                 break;
             }
-            wrefresh(stdscr);
             refresh();
         }
-        if(nm.p!=NULL  && FD_ISSET(fileno(nm.p),&rfds)){
+        if(nm.p != NULL && FD_ISSET(fileno(nm.p), &rfds)){
             nmr_notmuch_activate(&nm);
         }
 
