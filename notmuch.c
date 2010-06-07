@@ -3,6 +3,11 @@
 #include <errno.h>
 #include <string.h>
 #include "assert.h"
+#include <stdio.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <errno.h>
+#include <unistd.h>
 
 static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value){
     struct nmr_notmuch * nm=(struct nmr_notmuch*) ctx;
@@ -97,7 +102,7 @@ static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value)
         case 9:
             if(type==JSON_T_STRING){
                 nm->next_thread->tags=realloc(nm->next_thread->tags,(nm->next_thread->tags_l+1)*sizeof(void*));
-                char * str= malloc(strlen(value->vu.str.value));
+                char * str= malloc(strlen(value->vu.str.value)+1);
                 strcpy(str,value->vu.str.value);
                 nm->next_thread->tags[nm->next_thread->tags_l++]=str;
             }else if(type==JSON_T_ARRAY_END){
@@ -124,42 +129,71 @@ static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value)
 }
 
 int nmr_notmuch_search(struct  nmr_notmuch * notmuch,const char * query){
-    notmuch->state=0;
-
+    memset(notmuch,0,sizeof(struct nmr_notmuch));
+    notmuch->state=-4;
+    notmuch->query=query;
     const char * cmd=config_notmuch_call();
-    char * fc=malloc( (strlen(cmd)+strlen(query)+24)*sizeof(char));
-    sprintf(fc,"%s search --format=json %s",cmd,query);
+    char * fc=malloc( (strlen(cmd)+strlen(query)+8)*sizeof(char));
+    sprintf(fc,"%s count %s",cmd,query);
     notmuch->p=popen(fc,"r");
     free(fc);
     assert(notmuch->p);
+
     JSON_config config;
+
     init_JSON_config(&config);
     config.depth                  = 19;
     config.callback               = &notmuch_thread_callback;
     config.callback_ctx           = (void*)notmuch;
     config.allow_comments         = 1;
     config.handle_floats_manually = 0;
-
     notmuch->jc = new_JSON_parser(&config);
+
     return 0;
 }
 
 int nmr_notmuch_activate(struct nmr_notmuch * notmuch){
-    int next_char = fgetc(notmuch->p);
-    if( next_char ==EOF){
-        if (!JSON_parser_done(notmuch->jc)) {
-            fprintf(stderr, "JSON_parser_end: syntax error\n");
+    if(notmuch->state==-4){
+
+        FILE *pp=notmuch->p;
+        char buff [101];
+        int r=read(fileno(pp),&buff,100);
+        if(r<1){
+            if(errno==EAGAIN)
+                return 0;
+            perror("sd");
+            exit(errno);
+        }
+        buff[r]='\0';
+        notmuch->count=atoi(buff);
+        pclose(notmuch->p);
+
+        const char * cmd=config_notmuch_call();
+        char * fc=malloc( (strlen(cmd)+strlen(notmuch->query)+24)*sizeof(char));
+        sprintf(fc,"%s search --format=json %s",cmd,notmuch->query);
+        notmuch->p=popen(fc,"r");
+        free(fc);
+        assert(notmuch->p);
+
+        fcntl(fileno(notmuch->p), F_SETFL, fcntl(fileno(notmuch->p), F_GETFL) | O_NONBLOCK);
+        notmuch->state=0;
+    }else{
+        int next_char = fgetc(notmuch->p);
+        if( next_char ==EOF){
+            if (!JSON_parser_done(notmuch->jc)) {
+                fprintf(stderr, "JSON_parser_end: syntax error\n");
+                abort();
+            }
+            pclose(notmuch->p);
+            notmuch->p=NULL;
+        }
+        if (next_char <= 0) {
+            return errno;
+        }
+        if (!JSON_parser_char(notmuch->jc, next_char)) {
+            fprintf(stderr, "JSON_parser_char: syntax error. %c\n",next_char);
             abort();
         }
-        pclose(notmuch->p);
-        notmuch->p=NULL;
-    }
-    if (next_char <= 0) {
-        return errno;
-    }
-    if (!JSON_parser_char(notmuch->jc, next_char)) {
-        fprintf(stderr, "JSON_parser_char: syntax error. %c\n",next_char);
-        abort();
     }
 }
 

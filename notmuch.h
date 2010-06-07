@@ -20,6 +20,8 @@ struct nmr_notmuch{
     int state;
     void (*callback)(struct nmr_notmuch_thread*);
     struct nmr_notmuch_thread * next_thread;
+    int count;
+    char * query;
 };
 
 int nmr_notmuch_search(struct nmr_notmuch *, const char * query);

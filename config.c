@@ -6,6 +6,7 @@ int config_init(){
     init_pair(2,COLOR_BLACK,COLOR_GREEN);
     init_pair(3,COLOR_BLACK,COLOR_WHITE);
     init_pair(4,COLOR_YELLOW,-1);
+    init_pair(5,82,-1);
 }
 
 const char * config_notmuch_call(){
@@ -58,6 +59,17 @@ void config_set_face_attr(enum Face f,int set){
             break;
         case TagSelected:
             break;
+        case Authors:
+            break;
+            {
+                int a=COLOR_PAIR(5);
+                if(set){
+                    attron(a);
+                }else{
+                    attroff(a);
+                }
+                break;
+            }
     };
 }
 

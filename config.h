@@ -14,9 +14,10 @@ enum Face{
     LineSelected,
     StatusWin,
     Tag,
-    TagSelected
+    TagSelected,
+    Authors
 };
 
-void config_face_attr(enum Face f,int set);
+void config_set_face_attr(enum Face f,int set);
 
 

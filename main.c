@@ -10,7 +10,7 @@
 #include "config.h"
 #include <locale.h>
 #include "notmuch.h"
-
+#include <stdio.h>
 
 //drawing
 static int lines,cols,current_line_selected;
@@ -18,6 +18,26 @@ static int fg,bg;
 
 static struct nmr_notmuch_thread ** threads=0;
 static int thread_count=0; 
+static int expected_threads=0;
+
+static void addstr_at( const char *s, int at){
+    if(at+1>=cols){
+        return;
+    }
+    int l,c;
+    getyx(stdscr, l,c);
+    mvaddnstr(l,at,s,cols-at-1);
+    wmove(stdscr,l,c);
+}
+static void clip_addstr(const char * s){
+    int l,c;
+    getyx(stdscr, l,c);
+    if(c+1>=cols){
+//        mvaddstr(l,cols-4,"...");
+        return;
+    }
+    addnstr(s,cols-c-1);
+}
 
 static void pad_right(int to_right){
     int l,c;
@@ -34,41 +54,64 @@ static void pad_left(int to_left){
     }
 }
 
-
-
 static void draw_line(int line){
     if(line>lines-2)
         return;
-
-    if(line==current_line_selected){
-        config_set_face_attr(LineSelected,1);
-    }else{
-        config_set_face_attr(Line,1);
-    }
-
     if(line<thread_count){
+
         struct nmr_notmuch_thread * th=threads[line];
-        mvwprintw (stdscr,line,0, "[%i/%i]",th->matched,th->total);
-    }else{
-        mvwprintw (stdscr,line,0, "...");
-    }
 
-    pad_left(8);
-    if(line<thread_count){
-        struct nmr_notmuch_thread * th=threads[line];
-        wprintw (stdscr, "%s %s  ",th->authors,th->subject);
+        if(line==current_line_selected){
+            config_set_face_attr(LineSelected,1);
+        }else{
+            config_set_face_attr(Line,1);
+        }
 
+        char exp_buff[20];
+        snprintf(&exp_buff,20,"%i",expected_threads);
+        int exp=strlen(&exp_buff);
+        mvwprintw (stdscr,line,0, "%'*i/%'-*i",exp,th->matched,exp,th->total);
 
-        wprintw (stdscr, "(");
+        clip_addstr("     ");
+
+        config_set_face_attr(Authors,1);
+        clip_addstr (th->authors);
+        pad_left((cols+0.5)/4);
+        wmove(stdscr,line,(cols+0.5)/4);
+        config_set_face_attr(Authors,0);
+
+        for(int i=0;i<th->tags_l;i++){
+            if(strcmp(th->tags[i],"unread")==0){
+                attron(WA_BOLD);
+            }
+        }
+        clip_addstr("  ");
+        clip_addstr (th->subject);
+        clip_addstr("  ");
+//        pad_right(cols/4);
+        attroff(WA_BOLD);
         if(line==current_line_selected){
             config_set_face_attr(TagSelected,1);
         }else{
             config_set_face_attr(Tag,1);
         }
-        for(int i=0;i<th->tags_l;){
-            wprintw(stdscr,"%s",th->tags[i]);
-            if(++i<th->tags_l){
-                wprintw(stdscr," ",th->tags[i]);
+        for(int i=0;i<th->tags_l;i++){
+            if(strcmp(th->tags[i],"attachment")==0){
+                addstr_at("A",(exp*2)+3);
+                continue;
+            }
+            if(strcmp(th->tags[i],"inbox")==0){
+                addstr_at("I",(exp*2)+2);
+                continue;
+            }
+            if(strcmp(th->tags[i],"unread")==0){
+                addstr_at("U",(exp*2)+3);
+                continue;
+            }
+            clip_addstr("+");
+            clip_addstr(th->tags[i]);
+            if(i+1<th->tags_l){
+                clip_addstr(" ");
             }
         }
         if(line==current_line_selected){
@@ -76,14 +119,21 @@ static void draw_line(int line){
         }else{
             config_set_face_attr(Tag,0);
         }
-        wprintw (stdscr, ")");
+//        pad_right((4*cols/5)-9);
+        clip_addstr(" ");
+
+        //        wprintw (stdscr," \t\t--  %s ",th->authors);
+    }else{
+        mvwprintw (stdscr,line,0, "...");
     }
+
     pad_right(0);
     if(line==current_line_selected){
         config_set_face_attr(LineSelected,0);
     }else{
         config_set_face_attr(Line,0);
     }
+
 }
 
 void draw_status_win(){
@@ -143,6 +193,8 @@ void nmr_callback(struct nmr_notmuch_thread* t){
 }
 
 int main(int argc,char**argv){
+    setlocale(LC_ALL,"");
+
     initscr();
     curs_set(0);
     start_color();
@@ -167,12 +219,11 @@ int main(int argc,char**argv){
     a.previous_line=action_previous_line;
     a.next_line=action_next_line;
 
+    nmr_notmuch_search(&nm,"tag:inbox OR tag:todo");
     nm.callback=&nmr_callback;
-    nmr_notmuch_search(&nm,"tag:inbox");
 
     fd_set rfds;
     fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
-    fcntl(fileno(nm.p), F_SETFL, fcntl(fileno(nm.p), F_GETFL) | O_NONBLOCK);
     for(;;) {
         int maxfd=0;
         FD_ZERO (&rfds);
@@ -196,6 +247,9 @@ int main(int argc,char**argv){
         }
         if(nm.p!=NULL  && FD_ISSET(fileno(nm.p),&rfds)){
             nmr_notmuch_activate(&nm);
+            if(expected_threads==0){
+                expected_threads=nm.count;
+            }
         }
 
     }
