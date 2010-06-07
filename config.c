@@ -19,10 +19,10 @@ int config_handle_key_action(int key,struct actions * actions, void * context){
             return actions->quit(context);
         case KEY_UP:
         case 'k':
-            return actions->next_line(context);
+            return actions->down(context);
         case KEY_DOWN:
         case 'j':
-            return actions->previous_line(context);
+            return actions->up(context);
     }
     return 0;
 }

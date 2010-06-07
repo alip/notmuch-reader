@@ -4,8 +4,8 @@ const char * config_notmuch_call();
 
 struct actions{
     int (*quit)(void * context);
-    int (*next_line)(void * context);
-    int (*previous_line)( void * context);
+    int (*up)(void * context);
+    int (*down)( void * context);
 };
 int config_handle_key_action(int key,struct actions * actions, void * context);
 
