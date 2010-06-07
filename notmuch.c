@@ -32,6 +32,8 @@ static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value)
                     nm->state=6;
                 }else if(strcmp(value->vu.str.value,"authors")==0){
                     nm->state=7;
+                }else if(strcmp(value->vu.str.value,"tags")==0){
+                    nm->state=8;
                 }else{
                     nm->state=99;
                 }
@@ -62,8 +64,10 @@ static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value)
             nm->state=2;
             break;
         case 5:
-            if (type!=JSON_T_INTEGER)
+            if (type!=JSON_T_INTEGER){
                 fprintf(stderr,"corrupted json in state 5 (key:matched). got: %i \n",type);
+                abort();
+            }
             nm->next_thread->matched=value->vu.integer_value;
             nm->state=2;
             break;
@@ -82,6 +86,27 @@ static int notmuch_thread_callback(void* ctx, int type, const JSON_value* value)
             strcpy(nm->next_thread->authors,value->vu.str.value);
             nm->state=2;
             break;
+        case 8:
+            if(type!=JSON_T_ARRAY_BEGIN){
+                fprintf(stderr,"corrupted json in state 8 (key:tags). got: %i \n",type);
+                abort();
+            }
+            nm->next_thread->tags=malloc(sizeof(void*));
+            nm->state=9;
+            break;
+        case 9:
+            if(type==JSON_T_STRING){
+                nm->next_thread->tags=realloc(nm->next_thread->tags,(nm->next_thread->tags_l+1)*sizeof(void*));
+                char * str= malloc(strlen(value->vu.str.value));
+                strcpy(str,value->vu.str.value);
+                nm->next_thread->tags[nm->next_thread->tags_l++]=str;
+            }else if(type==JSON_T_ARRAY_END){
+                nm->state=2;
+            }else{
+                fprintf(stderr,"corrupted json in state 8 (key:tags). got: %i \n",type);
+                abort();
+            }
+            
         default:
             if(type==JSON_T_OBJECT_BEGIN || type==JSON_T_ARRAY_BEGIN){
                 ++nm->state;

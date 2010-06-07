@@ -57,22 +57,27 @@ static void draw_line(int line){
     if(line<thread_count){
         struct nmr_notmuch_thread * th=threads[line];
         wprintw (stdscr, "%s %s  ",th->authors,th->subject);
+
+
+        wprintw (stdscr, "(");
+        if(line==current_line_selected){
+            config_set_face_attr(TagSelected,1);
+        }else{
+            config_set_face_attr(Tag,1);
+        }
+        for(int i=0;i<th->tags_l;){
+            wprintw(stdscr,"%s",th->tags[i]);
+            if(++i<th->tags_l){
+                wprintw(stdscr," ",th->tags[i]);
+            }
+        }
+        if(line==current_line_selected){
+            config_set_face_attr(TagSelected,0);
+        }else{
+            config_set_face_attr(Tag,0);
+        }
+        wprintw (stdscr, ")");
     }
-
-
-    if(line==current_line_selected){
-        config_set_face_attr(TagSelected,1);
-    }else{
-        config_set_face_attr(Tag,1);
-    }
-    wprintw (stdscr, "(inbox unread)");
-    if(line==current_line_selected){
-        config_set_face_attr(TagSelected,1);
-    }else{
-        config_set_face_attr(Tag,1);
-    }
-
-
     pad_right(0);
     if(line==current_line_selected){
         config_set_face_attr(LineSelected,0);
@@ -84,8 +89,8 @@ static void draw_line(int line){
 void draw_status_win(){
     config_set_face_attr(StatusWin,1);
     mvwprintw (stdscr,lines-1,0, "tag:inbox");
-//    pad_line(7);
-    wprintw (stdscr, "    (%i/%i)  ",current_line_selected,thread_count);
+    //    pad_line(7);
+    wprintw (stdscr, "    (%i/%i)  ",current_line_selected+1,thread_count);
     pad_right(0);
     config_set_face_attr(StatusWin,0);
 }
@@ -133,6 +138,7 @@ void nmr_callback(struct nmr_notmuch_thread* t){
     }
     threads[thread_count-1]=t;
     draw_line(thread_count-1);
+    draw_status_win();
     refresh();
 }
 
