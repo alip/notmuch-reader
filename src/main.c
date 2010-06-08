@@ -11,7 +11,7 @@
 #include "notmuch.h"
 #include <stdio.h>
 
-#include "config.h"
+#include "conf.h"
 #include "curses.h"
 #include "search-window.h"
 

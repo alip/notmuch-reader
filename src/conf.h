@@ -1,6 +1,9 @@
-int config_init();
+#ifndef NMR_GUARD_CONF_H
+#define NMR_GUARD_CONF_H 1
 
-const char * config_notmuch_call();
+int config_init(void);
+
+const char *config_notmuch_call(void);
 
 struct actions{
     int (*quit)(void * context);
@@ -20,4 +23,4 @@ enum Face{
 
 void config_set_face_attr(enum Face f,int set);
 
-
+#endif /* !NMR_GUARD_CONF_H */

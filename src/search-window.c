@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <locale.h>
 
-#include "config.h"
+#include "conf.h"
 #include "notmuch.h"
 #include "curses.h"
 

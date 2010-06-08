@@ -1,5 +1,5 @@
-#include "config.h"
-#include <curses.h>
+#include "conf.h"
+#include "curses.h"
 
 int config_init(){
     init_pair(1,-1,-1);

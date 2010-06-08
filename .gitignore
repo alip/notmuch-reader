@@ -1,0 +1,27 @@
+# gitignore for notmuch-reader
+.*.swp
+*~
+*.[oa]
+
+.deps
+.libs
+Makefile.in
+Makefile
+
+/INSTALL
+/aclocal.m4
+/autom4te.cache
+/config.guess
+/config.h
+/config.h.in
+/config.log
+/config.sub
+/config.status
+/configure
+/compile
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+
+src/notmuch-reader
